@@ -1,0 +1,94 @@
+{% extends "dashboard/base.html" %}
+{% load static %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'dashboard/reports.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="reports-page">
+  <div class="reports-stats">
+    <div class="reports-stat-card">
+      <div class="reports-stat-label">Total Alerts</div>
+      <div class="reports-stat-value" id="reportsTotalAlerts">0</div>
+    </div>
+    <div class="reports-stat-card">
+      <div class="reports-stat-label">Last 24h</div>
+      <div class="reports-stat-value" id="reportsLast24" style="color:var(--accent-green)">0</div>
+    </div>
+    <div class="reports-stat-card">
+      <div class="reports-stat-label">Active Blocks</div>
+      <div class="reports-stat-value" id="reportsActiveBlocks" style="color:var(--accent-red)">0</div>
+    </div>
+    <div class="reports-stat-card">
+      <div class="reports-stat-label">Auto Blocks</div>
+      <div class="reports-stat-value" id="reportsAutoBlocks" style="color:var(--accent-blue)">0</div>
+    </div>
+  </div>
+
+  <div class="reports-grid">
+    <div class="card reports-chart-card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Daily Alert Volume</div>
+          <div class="card-sub">7-day detection trend for operational reporting</div>
+        </div>
+      </div>
+      <div class="reports-chart-wrap">
+        <canvas id="reportsDailyChart"></canvas>
+      </div>
+    </div>
+
+    <div class="card reports-chart-card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Response Mix</div>
+          <div class="card-sub">Action types captured by the control plane</div>
+        </div>
+      </div>
+      <div class="reports-chart-wrap reports-chart-wrap-small">
+        <canvas id="reportsActionChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="reports-main">
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">AI Automation Queue</div>
+          <div class="card-sub">Ready-made handoff list for future trained model actions</div>
+        </div>
+        <span class="live-tag"><span class="live-dot"></span>READY</span>
+      </div>
+      <div class="reports-list" id="reportsAutomationQueue"></div>
+    </div>
+
+    <div class="reports-side">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Recent Actions</div>
+            <div class="card-sub">Latest mode changes and block decisions</div>
+          </div>
+        </div>
+        <div class="reports-list" id="reportsRecentActions"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Top Blocked IPs</div>
+            <div class="card-sub">Registry summary for enforcement history</div>
+          </div>
+        </div>
+        <div class="reports-list" id="reportsBlockedIps"></div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+  <script src="{% static 'dashboard/reports.js' %}"></script>
+{% endblock %}

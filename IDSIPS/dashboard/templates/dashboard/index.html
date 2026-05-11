@@ -1,0 +1,278 @@
+<!-- dashboard/templates/dashboard/index.html -->
+{% extends "dashboard/base.html" %}
+
+{% load static %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'dashboard/index.css' %}">
+{% endblock %}
+
+{% block content %}
+
+<!-- ══ KPI CARDS ══ -->
+<div class="kpi-grid">
+
+  <div class="kpi-card red">
+    <div class="kpi-header">
+      <div class="kpi-icon red"><i class="fas fa-triangle-exclamation"></i></div>
+      <span class="kpi-trend up"><i class="fas fa-arrow-up"></i> live</span>
+    </div>
+    <div class="kpi-value" id="kpi-total-alerts" style="color:var(--accent-red)">0</div>
+    <div class="kpi-label">Total Alerts</div>
+    <div class="sparkline-wrap" id="spark1"></div>
+    <div class="kpi-sub" id="kpi-sub-24">0 in last 24h</div>
+  </div>
+
+  <div class="kpi-card blue">
+    <div class="kpi-header">
+      <div class="kpi-icon blue"><i class="fas fa-ban"></i></div>
+      <span class="kpi-trend up" style="background:rgba(59,130,246,.1);color:var(--accent-blue)"><i class="fas fa-shield-halved"></i> IPS</span>
+    </div>
+    <div class="kpi-value" id="kpi-blocked" style="color:var(--accent-blue)">0</div>
+    <div class="kpi-label">Blocked IPs</div>
+    <div class="sparkline-wrap" id="spark2"></div>
+    <div class="kpi-sub">Active firewall rules</div>
+  </div>
+
+  <div class="kpi-card green">
+    <div class="kpi-header">
+      <div class="kpi-icon green"><i class="fas fa-clock-rotate-left"></i></div>
+      <span class="kpi-trend down"><i class="fas fa-check"></i> OK</span>
+    </div>
+    <div class="kpi-value" id="kpi-last24h" style="color:var(--accent-green)">0</div>
+    <div class="kpi-label">Alerts — Last 24h</div>
+    <div class="sparkline-wrap" id="spark3"></div>
+    <div class="kpi-sub">Rolling 24h window</div>
+  </div>
+
+  <div class="kpi-card violet">
+    <div class="kpi-header">
+      <div class="kpi-icon violet"><i class="fas fa-satellite-dish"></i></div>
+      <span class="kpi-trend down" style="background:rgba(139,92,246,.1);color:var(--accent-violet)"><i class="fas fa-circle"></i> Active</span>
+    </div>
+    <div class="kpi-value" id="kpi-mode" style="color:var(--accent-violet);font-size:22px">{{ mode }}</div>
+    <div class="kpi-label">Suricata Mode</div>
+    <div class="sparkline-wrap" id="spark4"></div>
+    <div class="kpi-sub">IDS / IPS / HYBRID</div>
+  </div>
+
+</div>
+
+<!-- ══ CHARTS ROW ══ -->
+<div class="charts-row">
+
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <div class="card-title">Alert &amp; Traffic Timeline</div>
+        <div class="card-sub">Threats detected per minute — live stream</div>
+      </div>
+      <span class="live-tag"><span class="live-dot"></span>LIVE</span>
+    </div>
+    <div style="position:relative;height:180px;">
+      <canvas id="timelineChart"></canvas>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <div class="card-title">Threat Types</div>
+        <div class="card-sub">Attack classification</div>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:center;">
+      <canvas id="donutChart" width="160" height="160"></canvas>
+    </div>
+    <div class="donut-legend" id="donutLegend"></div>
+  </div>
+
+</div>
+
+<!-- ══ BOTTOM ROW ══ -->
+<div class="bottom-row">
+
+  <!-- Alerts Table -->
+  <div class="card alerts-card">
+    <div class="card-header">
+      <div>
+        <div class="card-title">Live Alerts</div>
+        <div class="card-sub">Real-time Suricata event stream</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span class="badge-live" id="visible-count">0</span>
+        <span class="live-tag"><span class="live-dot"></span>LIVE</span>
+      </div>
+    </div>
+    <div class="scrollable-table">
+      <table class="alerts-table">
+        <thead>
+          <tr>
+            <th>Sev</th>
+            <th>Attack Type</th>
+            <th>Src IP</th>
+            <th>Dst IP</th>
+            <th>Proto</th>
+            <th>Action</th>
+            <th>Time</th>
+          </tr>
+        </thead>
+        <tbody id="alertsBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Right Column -->
+  <div class="right-col">
+
+    <!-- Quick Controls -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title"><i class="fas fa-sliders" style="color:var(--accent-cyan);margin-right:8px;font-size:13px"></i>Quick Controls</div>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:10px">
+        <div style="position:relative;flex:1">
+          <select class="ids-select" id="modeSelect">
+            <option value="IDS">IDS — Detect Only</option>
+            <option value="IPS">IPS — Block &amp; Prevent</option>
+            <option value="HYBRID">HYBRID — Mixed</option>
+          </select>
+          <span class="select-arrow">▾</span>
+        </div>
+        <button class="btn btn-primary" id="setModeBtn" style="padding:8px 14px;font-size:12px;white-space:nowrap">Set Mode</button>
+      </div>
+      <button class="btn btn-danger w-100" id="panicBtn">
+        <i class="fas fa-triangle-exclamation"></i> PANIC — Disable IPS
+      </button>
+    </div>
+
+    <!-- AI Insights -->
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">AI Insights</div>
+          <div class="card-sub">ML anomaly detection</div>
+        </div>
+        <span class="ai-badge"><i class="fas fa-robot" style="font-size:9px"></i> Active</span>
+      </div>
+      <div class="ai-panel" id="aiPanel">
+        <div class="insight-item critical">
+          <div class="insight-title" style="color:var(--accent-red)">🚨 Coordinated Scan Detected</div>
+          <div class="insight-text">Multiple ports probed in rapid succession. Likely pre-exploitation reconnaissance.</div>
+          <div class="insight-meta">
+            <span class="ai-badge"><i class="fas fa-robot" style="font-size:9px"></i> AI Flagged</span>
+            <span class="insight-time">Updating…</span>
+          </div>
+        </div>
+        <div class="insight-item warning">
+          <div class="insight-title" style="color:var(--accent-yellow)">⚠️ Anomalous Traffic Volume</div>
+          <div class="insight-text">Traffic volume 12× above baseline on monitored segments. Potential DDoS or data exfil.</div>
+          <div class="insight-meta">
+            <span class="ai-badge"><i class="fas fa-robot" style="font-size:9px"></i> AI Flagged</span>
+            <span class="insight-time">Monitoring…</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Severity Distribution -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Severity Distribution</div>
+      </div>
+      <div class="alert-levels">
+        <div class="level-row">
+          <span class="level-label">Critical</span>
+          <div class="level-bar-bg"><div class="level-bar-fill" id="bar-critical" style="width:0%;background:linear-gradient(90deg,#8b5cf6,#a78bfa)"></div></div>
+          <span class="level-count" id="count-critical" style="color:#8b5cf6">0</span>
+        </div>
+        <div class="level-row">
+          <span class="level-label">High</span>
+          <div class="level-bar-bg"><div class="level-bar-fill" id="bar-high" style="width:0%;background:linear-gradient(90deg,#ef4444,#f97316)"></div></div>
+          <span class="level-count" id="count-high" style="color:#ef4444">0</span>
+        </div>
+        <div class="level-row">
+          <span class="level-label">Medium</span>
+          <div class="level-bar-bg"><div class="level-bar-fill" id="bar-medium" style="width:0%;background:linear-gradient(90deg,#f59e0b,#fbbf24)"></div></div>
+          <span class="level-count" id="count-medium" style="color:#f59e0b">0</span>
+        </div>
+        <div class="level-row">
+          <span class="level-label">Low</span>
+          <div class="level-bar-bg"><div class="level-bar-fill" id="bar-low" style="width:0%;background:linear-gradient(90deg,#10b981,#34d399)"></div></div>
+          <span class="level-count" id="count-low" style="color:#10b981">0</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══ EXTRA ROW ══ -->
+<div class="extra-row">
+
+  <!-- Blocked IPs -->
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <div class="card-title"><i class="fas fa-ban" style="color:var(--accent-red);margin-right:8px;font-size:13px"></i>Blocked IPs</div>
+      </div>
+      <span class="badge-live" id="blocked-badge">0</span>
+    </div>
+    <ul class="blocked-list" id="blockedList">
+      <li style="color:var(--text-muted);font-size:12px;text-align:center;padding:12px;list-style:none">
+        <i class="fas fa-shield-check" style="color:var(--accent-green)"></i> No IPs blocked
+      </li>
+    </ul>
+  </div>
+
+  <!-- Top Threats -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Top Attack Signatures</div>
+    </div>
+    <div class="threat-list" id="threatList">
+      <div class="threat-row">
+        <span class="threat-num">#—</span>
+        <span class="threat-name" style="color:var(--text-muted)">Loading…</span>
+        <span class="threat-count">—</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- System Status -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">System Status</div>
+    </div>
+    <div class="rule-stats">
+      <div class="rule-stat-box">
+        <div class="num" style="color:var(--accent-blue)" id="stat-total2">0</div>
+        <div class="lbl">Total Alerts</div>
+      </div>
+      <div class="rule-stat-box">
+        <div class="num" style="color:var(--accent-green)" id="stat-last24">0</div>
+        <div class="lbl">Last 24h</div>
+      </div>
+      <div class="rule-stat-box">
+        <div class="num" style="color:var(--accent-red)" id="stat-blocked">0</div>
+        <div class="lbl">Blocked</div>
+      </div>
+      <div class="rule-stat-box">
+        <div class="num" style="color:var(--accent-violet);font-size:14px" id="stat-mode">{{ mode }}</div>
+        <div class="lbl">Mode</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <a href="/admin/" class="btn btn-primary" style="flex:1;justify-content:center;font-size:12px;text-decoration:none">
+        <i class="fas fa-gears"></i> Admin
+      </a>
+    </div>
+  </div>
+
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+  <script src="{% static 'dashboard/index.js' %}"></script>
+{% endblock %}

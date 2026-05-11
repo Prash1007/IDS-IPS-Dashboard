@@ -1,0 +1,10 @@
+.env
+*.sqlite3
+IDSIPS/db.sqlite3
+IDSIPS/suricata_remote.local.json
+IDSIPS/suricata_key
+IDSIPS/ssh.txt
+IDSIPS/dashboard_rule_backup_*.json
+venv/
+__pycache__/
+*.py[cod]

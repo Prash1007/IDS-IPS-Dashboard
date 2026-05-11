@@ -1,0 +1,13 @@
+{
+  "suricata_ssh_host": "IP_ADDRESS",
+  "suricata_ssh_port": 22,
+  "suricata_ssh_user": "linux user name",
+  "suricata_ssh_key_path": "path to private key file",
+  "suricata_remote_rules_dir": "/etc/suricata/rules",
+  "suricata_remote_custom_rules_file": "dashboard_custom.rules",
+  "suricata_remote_block_rules_file": "dashboard_block.rules",
+  "suricata_remote_reload_command": "sudo suricatasc -c ruleset-reload-nonblocking",
+
+  "suricata_remote_validate_command": "sudo suricata -T -c /etc/suricata/suricata.yaml",
+  "suricata_home_net": "$HOME_NET"
+}

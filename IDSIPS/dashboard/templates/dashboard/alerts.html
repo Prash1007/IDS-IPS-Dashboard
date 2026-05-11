@@ -1,0 +1,107 @@
+{% extends "dashboard/base.html" %}
+{% load static %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'dashboard/alerts.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="alerts-page">
+  <div class="alerts-kpis">
+    <div class="alerts-kpi">
+      <div class="alerts-kpi-label">Total Alerts</div>
+      <div class="alerts-kpi-value" id="alerts-total">0</div>
+      <div class="alerts-kpi-sub">All detections in the database</div>
+    </div>
+    <div class="alerts-kpi">
+      <div class="alerts-kpi-label">Last 24h</div>
+      <div class="alerts-kpi-value" id="alerts-last24" style="color:var(--accent-green)">0</div>
+      <div class="alerts-kpi-sub">Rolling visibility window</div>
+    </div>
+    <div class="alerts-kpi">
+      <div class="alerts-kpi-label">Active Blocks</div>
+      <div class="alerts-kpi-value" id="alerts-active-blocks" style="color:var(--accent-red)">0</div>
+      <div class="alerts-kpi-sub">Registry entries still enforced</div>
+    </div>
+    <div class="alerts-kpi">
+      <div class="alerts-kpi-label">Automatic Blocks</div>
+      <div class="alerts-kpi-value" id="alerts-auto-blocks" style="color:var(--accent-blue)">0</div>
+      <div class="alerts-kpi-sub">IPS/HYBRID responses recorded</div>
+    </div>
+  </div>
+
+  <div class="alerts-main">
+    <div class="card alerts-stream-card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Alert Stream</div>
+          <div class="card-sub">Full alert log with response state and live update support</div>
+        </div>
+        <div class="alerts-toolbar">
+          <select id="alertsSeverityFilter" class="alerts-select">
+            <option value="">All Severity</option>
+            <option value="critical">Critical</option>
+            <option value="high">High</option>
+            <option value="medium">Medium</option>
+            <option value="low">Low</option>
+          </select>
+          <select id="alertsResponseFilter" class="alerts-select">
+            <option value="">All Response</option>
+            <option value="blocked-auto">Blocked Auto</option>
+            <option value="blocked-manual">Blocked Manual</option>
+            <option value="blocked-existing">Blocked Existing</option>
+            <option value="watched">Watched</option>
+            <option value="alerted">Alerted</option>
+          </select>
+          <span class="live-tag"><span class="live-dot"></span>LIVE</span>
+        </div>
+      </div>
+      <div class="scrollable-table alerts-scroll">
+        <table class="alerts-table alerts-wide-table">
+          <thead>
+            <tr>
+              <th>Sev</th>
+              <th>Attack</th>
+              <th>Attack Source IP</th>
+              <th>Target IP</th>
+              <th>Protocol</th>
+              <th>Mode</th>
+              <th>Response</th>
+              <th>Time</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="alertsStreamBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="alerts-side">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Blocked IP Registry</div>
+            <div class="card-sub">Stored block results with attack context</div>
+          </div>
+          <span class="badge-live" id="alertsBlockedBadge">0</span>
+        </div>
+        <div class="alerts-block-list" id="alertsBlockedList"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Response Timeline</div>
+            <div class="card-sub">Mode changes, manual controls, and auto-containment events</div>
+          </div>
+        </div>
+        <div class="alerts-action-list" id="alertsActionList"></div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+  <script src="{% static 'dashboard/alerts.js' %}"></script>
+{% endblock %}

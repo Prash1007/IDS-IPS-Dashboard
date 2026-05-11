@@ -1,0 +1,164 @@
+<!-- dashboard/templates/dashboard/base.html -->
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="csrf-token" content="{{ csrf_token }}"/>
+  <title>IDS/IPS Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <!-- jsPDF for PDF export -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+  <!-- Shared Styles -->
+  <link rel="stylesheet" href="{% static 'dashboard/base.css' %}">
+  {% block extra_css %}{% endblock %}
+</head>
+<body data-active-nav="{{ active_nav|default:'' }}">
+
+<!-- Animated mesh background -->
+<div class="bg-mesh"><canvas id="meshCanvas"></canvas></div>
+
+<!-- Mobile overlay -->
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+<!-- Mobile hamburger -->
+<button class="hamburger" id="hamburgerBtn" onclick="openSidebar()">
+  <i class="fas fa-bars"></i>
+</button>
+
+<!-- ══════════ SIDEBAR ══════════ -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-icon"><i class="fas fa-shield-halved"></i></div>
+    <div class="logo-text">
+      <h1>IDS/IPS<span style="color:var(--accent-cyan)">DASHBOARD</span></h1>
+    </div>
+    <button class="sidebar-close" onclick="closeSidebar()"><i class="fas fa-times"></i></button>
+  </div>
+
+  <div class="sidebar-status">
+    <div class="status-dot"></div>
+    <span class="status-text">Suricata Active</span>
+    <span class="status-sub" id="currentMode">{{ mode }}</span>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-label">Overview</div>
+    <a class="nav-item{% if active_nav == 'dashboard' %} active{% endif %}" data-nav="dashboard" href="{% url 'index' %}" {% if active_nav == 'dashboard' %}aria-current="page"{% endif %}>
+      <span class="icon"><i class="fas fa-gauge-high"></i></span>Dashboard
+    </a>
+    <a class="nav-item{% if active_nav == 'alerts' %} active{% endif %}" data-nav="alerts" href="{% url 'alerts' %}" {% if active_nav == 'alerts' %}aria-current="page"{% endif %}>
+      <span class="icon"><i class="fas fa-bell"></i></span>Alerts
+      <span class="nav-badge" id="sidebar-alert-badge">0</span>
+    </a>
+    <a class="nav-item{% if active_nav == 'threat-map' %} active{% endif %}" data-nav="threat-map" href="{% url 'threat_map' %}" {% if active_nav == 'threat-map' %}aria-current="page"{% endif %}>
+      <span class="icon"><i class="fas fa-map-location-dot"></i></span>Threat Map
+    </a>
+
+    <div class="nav-label" style="margin-top:8px">Detection</div>
+    <a class="nav-item{% if active_nav == 'rule-manager' %} active{% endif %}" data-nav="rule-manager" href="{% url 'rule_manager' %}" {% if active_nav == 'rule-manager' %}aria-current="page"{% endif %}>
+      <span class="icon"><i class="fas fa-file-code"></i></span>Rule Manager
+    </a>
+    <a class="nav-item{% if active_nav == 'network-traffic' %} active{% endif %}" data-nav="network-traffic" href="{% url 'network_traffic' %}" {% if active_nav == 'network-traffic' %}aria-current="page"{% endif %}>
+      <span class="icon"><i class="fas fa-network-wired"></i></span>Network Traffic
+    </a>
+    <!-- <div class="nav-item" onclick="setActive(this)">
+      <span class="icon"><i class="fas fa-bug"></i></span>Malware Analysis
+    </div> -->
+
+    <div class="nav-label" style="margin-top:8px">Intelligence</div>
+    <!-- <div class="nav-item" onclick="setActive(this)">
+      <span class="icon"><i class="fas fa-robot"></i></span>AI Engine
+    </div> -->
+    <a class="nav-item{% if active_nav == 'reports' %} active{% endif %}" data-nav="reports" href="{% url 'reports' %}" {% if active_nav == 'reports' %}aria-current="page"{% endif %}>
+      <span class="icon"><i class="fas fa-chart-bar"></i></span>Reports
+    </a>
+    <a class="nav-item" href="/api/alerts/?limit=all" target="_blank" rel="noopener">
+      <span class="icon"><i class="fas fa-database"></i></span>Raw Logs
+    </a>
+
+    <div class="nav-label" style="margin-top:8px">System</div>
+    <a class="nav-item" href="/admin/">
+      <span class="icon"><i class="fas fa-gears"></i></span>Admin Panel
+    </a>
+    <!-- <div class="nav-item" onclick="setActive(this)">
+      <span class="icon"><i class="fas fa-plug"></i></span>Integrations
+      <span class="tooltip-badge">NEW</span>
+    </div> -->
+  </div>
+
+  <div class="sidebar-footer">
+    <div class="user-card">
+      <div class="avatar">SA</div>
+      <div class="user-info">
+        <div class="user-name">Security Analyst</div>
+        <div class="user-role">Administrator</div>
+      </div>
+      <i class="fas fa-ellipsis-vertical" style="color:var(--text-muted);font-size:13px;margin-left:auto"></i>
+    </div>
+  </div>
+</aside>
+
+<!-- ══════════ MAIN ══════════ -->
+<main class="main">
+
+  <!-- Topbar -->
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="topbar-title">{{ page_title|default:"Security Dashboard" }}</div>
+      <div class="topbar-sub">
+        <span class="live-tag"><span class="live-dot"></span>Live</span>
+        &nbsp;·&nbsp; {{ page_subtitle|default:"Live security operations view" }}
+        &nbsp;·&nbsp; Last updated: <span id="last-updated">just now</span>
+        &nbsp;·&nbsp; Mode: <strong id="modeDisplay" style="color:var(--accent-cyan)">{{ mode }}</strong>
+      </div>
+    </div>
+    <div class="topbar-actions">
+      <div class="search-box">
+        <i class="fas fa-search" style="color:var(--text-muted);font-size:13px"></i>
+        <input type="text" id="filterInput" placeholder="Search IPs, attack types…"/>
+      </div>
+      <div class="tab-group">
+        <span class="tab active">24h</span>
+        <span class="tab">7d</span>
+        <span class="tab">30d</span>
+      </div>
+      <button class="icon-btn" id="notificationBell" title="Notifications" type="button" aria-label="Notifications">
+        <i class="fas fa-bell"></i>
+        <span class="notif-dot" id="notifDot" hidden></span>
+        <span class="notif-count" id="notifCount" hidden>0</span>
+      </button>
+      <!-- Export dropdown -->
+      <div class="export-dropdown" id="exportDropdown">
+        <button class="btn btn-primary" id="exportBtn" onclick="toggleExportMenu()">
+          <i class="fas fa-download"></i> <span class="btn-text">Export</span>
+          <i class="fas fa-chevron-down" style="font-size:10px;margin-left:2px"></i>
+        </button>
+        <div class="export-menu" id="exportMenu">
+          <div class="export-item" onclick="exportCSV()">
+            <i class="fas fa-file-csv" style="color:#10b981"></i> Download CSV
+          </div>
+          <div class="export-item" onclick="exportPDF()">
+            <i class="fas fa-file-pdf" style="color:#ef4444"></i> Download PDF
+          </div>
+          <div class="export-divider"></div>
+          <div class="export-item" onclick="window.open('/api/alerts/?limit=all','_blank')">
+            <i class="fas fa-external-link-alt" style="color:#3b82f6"></i> Raw JSON API
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {% block content %}{% endblock %}
+
+</main>
+
+<script src="{% static 'dashboard/base.js' %}"></script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

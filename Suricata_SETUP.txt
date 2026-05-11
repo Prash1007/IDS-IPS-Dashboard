@@ -1,0 +1,31 @@
+installation and integration of suricata.
+step1:
+sudo apt update #updates the machine
+sudo apt install suricata -y #installs suricata with permission yes
+
+Step2:
+suricata --build-info
+
+Step3: Teasting configuration
+sudo suricata -T -c /etc/suricata/suricata.yaml -v
+sudo apt install suricata-update -y #install latest updates of suricata
+ls /var/lib/suricata/rules/ #verify the installed rules.
+#check again
+sudo suricata -T -c /etc/suricata/suricata.yaml -v
+#The output be like successful"Configuration provided was successfully loaded"
+Till here we installed suricata and got our rules set. Now check what network interface is being used by our suricata
+If found any interface mismatch issue fix it:
+Step1:
+sudo nano /etc/suricata/suricata.yaml
+find af-packet
+In mine it shows eth0 so I'll replace all eth0 to enp0s3
+change it to your own interface matching for our it's enp0s3
+af-packet:
+- interface: enp0s3
+save and exit and don't touch other interfaces.
+
+
+Now we need to get the separate IPv4 address of ubuntu server running on vm so we used bridged adapter, adapter name and paravirtualized network(virtual net).
+Then tried to ping it from attacking machine and was successfully done. Tested nmap scan also and it worked.
+
+Next we're going to establish the connection between our dashboard and the suricata ubuntu cli server.

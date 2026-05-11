@@ -1,0 +1,82 @@
+{% extends "dashboard/base.html" %}
+{% load static %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'dashboard/threat_map.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="tm-page">
+  <div class="tm-stats">
+    <div class="tm-stat-card">
+      <div class="tm-stat-label">Attack Sources</div>
+      <div class="tm-stat-value" id="tmOrigins">0</div>
+    </div>
+    <div class="tm-stat-card">
+      <div class="tm-stat-label">Target IPs</div>
+      <div class="tm-stat-value" id="tmTargets" style="color:var(--accent-green)">0</div>
+    </div>
+    <div class="tm-stat-card">
+      <div class="tm-stat-label">Blocked Sources</div>
+      <div class="tm-stat-value" id="tmBlockedOrigins" style="color:var(--accent-red)">0</div>
+    </div>
+    <div class="tm-stat-card">
+      <div class="tm-stat-label">Active Paths</div>
+      <div class="tm-stat-value" id="tmPaths" style="color:var(--accent-blue)">0</div>
+    </div>
+  </div>
+
+  <div class="tm-main">
+    <div class="card tm-map-card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Threat Corridor Map</div>
+          <div class="card-sub">Attack source IPs and target IPs from all active alerts</div>
+        </div>
+        <span class="live-tag"><span class="live-dot"></span>LIVE</span>
+      </div>
+      <div class="tm-canvas-wrap">
+        <canvas id="tmCanvas"></canvas>
+        <div class="tm-overlay-label tm-origin-label">Attack Sources</div>
+        <div class="tm-overlay-label tm-target-label">Target IPs</div>
+      </div>
+    </div>
+
+    <div class="tm-side">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Attack Sources</div>
+            <div class="card-sub">Most active source IPs on the map</div>
+          </div>
+        </div>
+        <div class="tm-list" id="tmHotspots"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Campaigns</div>
+            <div class="card-sub">Attack types across active unarchived alerts</div>
+          </div>
+        </div>
+        <div class="tm-list" id="tmCampaigns"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <div class="card-title">Source to Target Paths</div>
+        <div class="card-sub">Aggregated attack source IP to target IP paths and response state</div>
+      </div>
+    </div>
+    <div class="tm-corridors" id="tmCorridors"></div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+  <script src="{% static 'dashboard/threat_map.js' %}"></script>
+{% endblock %}

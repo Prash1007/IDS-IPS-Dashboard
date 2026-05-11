@@ -1,0 +1,131 @@
+<!-- dashboard/templates/dashboard/network_traffic.html -->
+{% extends "dashboard/base.html" %}
+{% load static %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'dashboard/network_traffic.css' %}">
+{% endblock %}
+
+{% block content %}
+
+<!-- ══ NETWORK TRAFFIC PAGE ══ -->
+<div class="nt-page">
+
+  <!-- Top stats bar -->
+  <div class="nt-stats-bar">
+    <div class="nt-stat">
+      <div class="nt-stat-icon" style="background:rgba(59,130,246,0.15);color:#3b82f6"><i class="fas fa-network-wired"></i></div>
+      <div>
+        <div class="nt-stat-val" id="nt-total-conn">0</div>
+        <div class="nt-stat-lbl">Active Flows</div>
+      </div>
+    </div>
+    <div class="nt-stat">
+      <div class="nt-stat-icon" style="background:rgba(239,68,68,0.15);color:#ef4444"><i class="fas fa-skull-crossbones"></i></div>
+      <div>
+        <div class="nt-stat-val" id="nt-threat-conn" style="color:#ef4444">0</div>
+        <div class="nt-stat-lbl">Threat Flows</div>
+      </div>
+    </div>
+    <div class="nt-stat">
+      <div class="nt-stat-icon" style="background:rgba(16,185,129,0.15);color:#10b981"><i class="fas fa-check-circle"></i></div>
+      <div>
+        <div class="nt-stat-val" id="nt-clean-conn" style="color:#10b981">0</div>
+        <div class="nt-stat-lbl">Clean Flows</div>
+      </div>
+    </div>
+    <div class="nt-stat">
+      <div class="nt-stat-icon" style="background:rgba(245,158,11,0.15);color:#f59e0b"><i class="fas fa-shield-halved"></i></div>
+      <div>
+        <div class="nt-stat-val" id="nt-blocked-conn" style="color:#f59e0b">0</div>
+        <div class="nt-stat-lbl">Blocked</div>
+      </div>
+    </div>
+    <div class="nt-stat">
+      <div class="nt-stat-icon" style="background:rgba(6,182,212,0.15);color:#06b6d4"><i class="fas fa-arrow-right-arrow-left"></i></div>
+      <div>
+        <div class="nt-stat-val" id="nt-unique-src" style="color:#06b6d4">0</div>
+        <div class="nt-stat-lbl">Attack Sources</div>
+      </div>
+    </div>
+    <div class="nt-stat-right">
+      <div class="nt-legend">
+        <span class="nt-leg-dot" style="background:#ef4444"></span><span>Attack</span>
+        <span class="nt-leg-dot" style="background:#f59e0b;margin-left:10px"></span><span>Blocked</span>
+        <span class="nt-leg-dot" style="background:#10b981;margin-left:10px"></span><span>Normal</span>
+        <span class="nt-leg-dot" style="background:#3b82f6;margin-left:10px"></span><span>Scanning</span>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;margin-top:8px">
+        <button class="nt-ctrl-btn" id="nt-pause-btn" onclick="togglePause()"><i class="fas fa-pause"></i> Pause</button>
+        <button class="nt-ctrl-btn" id="nt-reset-btn" onclick="resetTopology()"><i class="fas fa-arrows-rotate"></i> Reset</button>
+        <select class="nt-select" id="nt-layout-sel" onchange="setLayout(this.value)">
+          <option value="layered">Layered View</option>
+          <option value="star">Star View</option>
+          <option value="free">Free Form</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main content: canvas + detail panel -->
+  <div class="nt-body">
+
+    <!-- Canvas topology -->
+    <div class="nt-canvas-wrap" id="ntCanvasWrap">
+      <canvas id="ntCanvas"></canvas>
+      <!-- Tooltip -->
+      <div class="nt-tooltip" id="ntTooltip" style="display:none"></div>
+      <!-- Zoom controls -->
+      <div class="nt-zoom-ctrl">
+        <button onclick="zoomIn()"><i class="fas fa-plus"></i></button>
+        <button onclick="zoomReset()"><i class="fas fa-compress-arrows-alt"></i></button>
+        <button onclick="zoomOut()"><i class="fas fa-minus"></i></button>
+      </div>
+      <!-- Live badge -->
+      <div class="nt-live-badge"><span class="live-dot"></span> LIVE TOPOLOGY</div>
+    </div>
+
+    <!-- Detail panel -->
+    <div class="nt-detail-panel" id="ntDetailPanel">
+      <div class="nt-detail-header">
+        <div id="ntDetailIcon" class="nt-detail-ent-icon"></div>
+        <div>
+          <div class="nt-detail-name" id="ntDetailName">Select an Entity</div>
+          <div class="nt-detail-type" id="ntDetailType">Click any node to inspect</div>
+        </div>
+      </div>
+
+      <div class="nt-detail-body" id="ntDetailBody">
+        <div class="nt-detail-placeholder">
+          <i class="fas fa-mouse-pointer" style="font-size:28px;color:var(--text-muted);margin-bottom:10px"></i>
+          <div style="color:var(--text-muted);font-size:12px">Click any entity node<br>to view details</div>
+        </div>
+      </div>
+
+      <!-- Connection list -->
+      <div class="nt-conn-list" id="ntConnList" style="display:none">
+        <div class="nt-conn-header">Attack Source/Target Connections</div>
+        <div id="ntConnItems"></div>
+      </div>
+
+      <!-- Recent alerts for selected node -->
+      <div class="nt-alert-mini" id="ntAlertMini" style="display:none">
+        <div class="nt-conn-header">Recent Attack Source/Target Alerts</div>
+        <div id="ntAlertMiniItems"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Flow log strip at bottom -->
+  <div class="nt-flow-log">
+    <div class="nt-flow-log-title"><i class="fas fa-stream"></i> Attack Source to Target Log</div>
+    <div class="nt-flow-log-items" id="ntFlowLog"></div>
+  </div>
+
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+  <script src="{% static 'dashboard/network_traffic.js' %}"></script>
+{% endblock %}

@@ -1,0 +1,42 @@
+creating docker container to use kafka.
+
+sudo apt install -y docker.io
+sudo systemctl enable --now docker
+sudo usermod -aG docker $USER
+newgrp docker
+docker ps
+
+
+Whenever you shift your network you always needed to change your kafka setup.
+
+STEP 1: Old Kafka remove karo
+docker rm -f kafka
+STEP 2: Clean & correct Kafka run command
+Remember to change the IP regarding your device where you're setting up.
+docker run -d \
+  --name kafka \
+  -p 9092:9092 \
+  -e KAFKA_NODE_ID=1 \
+  -e KAFKA_PROCESS_ROLES=broker,controller \
+  -e KAFKA_CONTROLLER_QUORUM_VOTERS=1@localhost:9093 \
+  -e KAFKA_LISTENERS=PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093 \
+  -e KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://YOUR_IP:9092 \
+  -e KAFKA_CONTROLLER_LISTENER_NAMES=CONTROLLER \
+  -e KAFKA_INTER_BROKER_LISTENER_NAME=PLAINTEXT \
+  -e KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1 \
+  -e CLUSTER_ID=$(uuidgen) \
+  confluentinc/cp-kafka:8.2.0
+
+STEP 3: Wait (IMPORTANT)
+docker logs -f kafka
+
+Wait until kafka shows:
+Kafka Server started
+
+STEP 4: Topic recreate
+docker exec -it kafka kafka-topics \
+--create \
+--topic ids-alerts \
+--bootstrap-server localhost:9092 \
+--partitions 3 \
+--replication-factor 1

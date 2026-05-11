@@ -1,0 +1,358 @@
+<!-- dashboard/templates/dashboard/rule_manager.html -->
+{% extends "dashboard/base.html" %}
+{% load static %}
+
+{% block extra_css %}<link rel="stylesheet" href="{% static 'dashboard/rule_manager.css' %}">{% endblock %}
+
+{% block extra_js %}<script src="{% static 'dashboard/rule_manager.js' %}"></script>{% endblock %}
+
+{% block content %}
+
+<!-- ══ RULE MANAGER PAGE ══ -->
+<div class="rm-page">
+
+  <!-- Page header -->
+  <div class="rm-topbar">
+    <div>
+      <div class="rm-page-title"><i class="fas fa-file-code" style="color:var(--accent-cyan)"></i> Suricata Rule Manager</div>
+      <div class="rm-page-sub">Create, edit and manage custom rules in <code class="rm-path">/etc/suricata/rules/custom.rules</code></div>
+    </div>
+    <div class="rm-topbar-actions">
+      <div class="rm-status-chip" id="rmStatusChip">
+        <span class="rm-status-dot ok"></span>
+        <span id="rmStatusText">Suricata Running</span>
+      </div>
+      <button class="rm-btn rm-btn-ghost" onclick="reloadSuricata()">
+        <i class="fas fa-arrows-rotate"></i> Reload Rules
+      </button>
+      <button class="rm-btn rm-btn-danger" onclick="validateRules()">
+        <i class="fas fa-circle-check"></i> Validate
+      </button>
+      <button class="rm-btn rm-btn-primary" onclick="openNewRule()">
+        <i class="fas fa-plus"></i> New Rule
+      </button>
+    </div>
+  </div>
+
+  <!-- Stats chips -->
+  <div class="rm-stat-chips">
+    <div class="rm-chip"><span class="rm-chip-val" id="rm-total">0</span><span class="rm-chip-lbl">Total Rules</span></div>
+    <div class="rm-chip"><span class="rm-chip-val" id="rm-active" style="color:#10b981">0</span><span class="rm-chip-lbl">Active</span></div>
+    <div class="rm-chip"><span class="rm-chip-val" id="rm-disabled" style="color:#f59e0b">0</span><span class="rm-chip-lbl">Disabled</span></div>
+    <div class="rm-chip"><span class="rm-chip-val" id="rm-custom" style="color:#06b6d4">0</span><span class="rm-chip-lbl">Custom</span></div>
+    <div class="rm-chip rm-chip-last">
+      <div class="rm-file-status">
+        <i class="fas fa-file-lines" style="color:#3b82f6"></i>
+        <span style="font-size:11px;color:var(--text-muted)">custom.rules</span>
+        <span class="rm-file-badge" id="rmFileBadge">Synced</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main content split -->
+  <div class="rm-body">
+
+    <!-- LEFT: Rule list panel -->
+    <div class="rm-list-panel">
+      <div class="rm-panel-header">
+        <div class="rm-search-box">
+          <i class="fas fa-search"></i>
+          <input type="text" id="rmSearch" placeholder="Search rules, SID, message…" oninput="filterRules()"/>
+        </div>
+        <div class="rm-filter-row">
+          <select class="rm-mini-select" id="rmProtoFilter" onchange="filterRules()">
+            <option value="">All Protocols</option>
+            <option value="tcp">TCP</option>
+            <option value="udp">UDP</option>
+            <option value="icmp">ICMP</option>
+            <option value="ip">IP</option>
+            <option value="http">HTTP</option>
+            <option value="dns">DNS</option>
+            <option value="tls">TLS</option>
+            <option value="smtp">SMTP</option>
+            <option value="ssh">SSH</option>
+            <option value="ftp">FTP</option>
+            <option value="smb">SMB</option>
+          </select>
+          <select class="rm-mini-select" id="rmStatusFilter" onchange="filterRules()">
+            <option value="">All Status</option>
+            <option value="active">Active</option>
+            <option value="disabled">Disabled</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Rules list -->
+      <div class="rm-rules-list" id="rmRulesList">
+        <div class="rm-empty-state" id="rmEmptyState">
+          <i class="fas fa-file-code" style="font-size:28px;color:var(--text-muted)"></i>
+          <div style="color:var(--text-muted);font-size:12px;margin-top:8px">No rules yet. Create your first rule.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: Editor panel -->
+    <div class="rm-editor-panel" id="rmEditorPanel">
+
+      <!-- Editor header with tabs -->
+      <div class="rm-editor-header">
+        <div class="rm-editor-title" id="rmEditorTitle">New Rule</div>
+        <div class="rm-editor-tabs">
+          <button class="rm-tab active" onclick="switchTab('builder',this)"><i class="fas fa-sliders"></i> Builder</button>
+          <button class="rm-tab" onclick="switchTab('raw',this)"><i class="fas fa-code"></i> Raw</button>
+          <button class="rm-tab" onclick="switchTab('templates',this)"><i class="fas fa-layer-group"></i> Templates</button>
+        </div>
+      </div>
+
+      <!-- ── TAB: Builder ── -->
+      <div class="rm-tab-content" id="tab-builder">
+        <div class="rm-form-scroll">
+
+          <div class="rm-section-label">Rule Action & Protocol</div>
+          <div class="rm-row-2">
+            <div class="rm-field">
+              <label>Action</label>
+              <select class="rm-select" id="rf-action" onchange="buildPreview()">
+                <option value="alert">alert — generate alert</option>
+                <option value="drop">drop — block &amp; alert (IPS)</option>
+                <option value="reject">reject — reject &amp; alert</option>
+                <option value="pass">pass — allow traffic</option>
+              </select>
+            </div>
+            <div class="rm-field">
+              <label>Protocol</label>
+              <select class="rm-select" id="rf-proto" onchange="handleProtocolChange()">
+                <option value="tcp">TCP</option>
+                <option value="udp">UDP</option>
+                <option value="icmp">ICMP</option>
+                <option value="ip">IP</option>
+                <option value="http">HTTP</option>
+                <option value="dns">DNS</option>
+                <option value="tls">TLS</option>
+                <option value="smtp">SMTP</option>
+                <option value="ssh">SSH</option>
+                <option value="ftp">FTP</option>
+                <option value="smb">SMB</option>
+                <option value="__other__">Other...</option>
+              </select>
+              <input class="rm-input rm-proto-other" type="text" id="rf-proto-other" placeholder="custom protocol e.g. modbus" style="display:none" oninput="buildPreview()"/>
+            </div>
+          </div>
+
+          <div class="rm-section-label" style="margin-top:14px">Source</div>
+          <div class="rm-row-2">
+            <div class="rm-field">
+              <label>Source IP <span class="rm-hint">any, 192.168.0.0/24, !10.0.0.1</span></label>
+              <input class="rm-input" type="text" id="rf-src-ip" value="any" oninput="buildPreview()"/>
+            </div>
+            <div class="rm-field">
+              <label>Source Port <span class="rm-hint">any, 80, 1024:65535</span></label>
+              <input class="rm-input" type="text" id="rf-src-port" value="any" oninput="buildPreview()"/>
+            </div>
+          </div>
+
+          <div class="rm-section-label" style="margin-top:14px">Destination</div>
+          <div class="rm-row-2">
+            <div class="rm-field">
+              <label>Dest IP <span class="rm-hint">any, $HOME_NET, $HTTP_SERVERS</span></label>
+              <input class="rm-input" type="text" id="rf-dst-ip" value="any" oninput="buildPreview()"/>
+            </div>
+            <div class="rm-field">
+              <label>Dest Port <span class="rm-hint">any, 22, !80</span></label>
+              <input class="rm-input" type="text" id="rf-dst-port" value="any" oninput="buildPreview()"/>
+            </div>
+          </div>
+
+          <div class="rm-field" style="margin-top:14px">
+            <label>Direction</label>
+            <div class="rm-dir-group">
+              <label class="rm-radio-btn"><input type="radio" name="dir" value="->" checked onchange="buildPreview()"><span>→ Unidirectional</span></label>
+              <label class="rm-radio-btn"><input type="radio" name="dir" value="<>" onchange="buildPreview()"><span>↔ Bidirectional</span></label>
+            </div>
+          </div>
+
+          <div class="rm-section-label" style="margin-top:14px">Rule Options</div>
+          <div class="rm-field">
+            <label>Message (msg) <span class="rm-required">*</span></label>
+            <input class="rm-input" type="text" id="rf-msg" placeholder='e.g. "TEST Port Scan Detected"' oninput="buildPreview()"/>
+          </div>
+
+          <div class="rm-row-2" style="margin-top:10px">
+            <div class="rm-field">
+              <label>SID <span class="rm-hint">Auto-assigned unique ID >=1000001</span></label>
+              <input class="rm-input" type="number" id="rf-sid" value="1000001" min="1000001" oninput="buildPreview()"/>
+            </div>
+            <div class="rm-field">
+              <label>Rev</label>
+              <input class="rm-input" type="number" id="rf-rev" value="1" min="1" oninput="buildPreview()"/>
+            </div>
+          </div>
+
+          <div class="rm-field" style="margin-top:10px">
+            <label>Severity / Classtype</label>
+            <select class="rm-select" id="rf-classtype" onchange="buildPreview()">
+              <option value="">— none —</option>
+              <option value="attempted-recon">attempted-recon</option>
+              <option value="attempted-admin">attempted-admin</option>
+              <option value="attempted-user">attempted-user</option>
+              <option value="denial-of-service">denial-of-service</option>
+              <option value="trojan-activity">trojan-activity</option>
+              <option value="web-application-attack">web-application-attack</option>
+              <option value="network-scan">network-scan</option>
+              <option value="policy-violation">policy-violation</option>
+            </select>
+          </div>
+
+          <!-- Advanced options (collapsible) -->
+          <div class="rm-advanced-toggle" onclick="toggleAdvanced()">
+            <i class="fas fa-chevron-right" id="advChevron"></i>
+            Advanced Options
+          </div>
+          <div class="rm-advanced" id="rmAdvanced" style="display:none">
+
+            <div class="rm-field">
+              <label>Content Match <span class="rm-hint">literal string in payload</span></label>
+              <input class="rm-input" type="text" id="rf-content" placeholder='"HTTP/1.1 400"' oninput="buildPreview()"/>
+            </div>
+
+            <div class="rm-row-2" style="margin-top:10px">
+              <div class="rm-field">
+                <label>Flags <span class="rm-hint">S, SA, PA, R, F, U</span></label>
+                <input class="rm-input" type="text" id="rf-flags" placeholder="S" oninput="buildPreview()"/>
+              </div>
+              <div class="rm-field">
+                <label>Flow</label>
+                <select class="rm-select" id="rf-flow" onchange="buildPreview()">
+                  <option value="">— none —</option>
+                  <option value="to_server,established">to_server,established</option>
+                  <option value="to_client,established">to_client,established</option>
+                  <!-- <option value="to_server,established">to_server</option>
+                  <option value="to_client,established">to_client</option> -->
+                  <option value="stateless">stateless</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="rm-section-label" style="margin-top:10px">Threshold / Rate Limit</div>
+            <div class="rm-toggle-row">
+              <label class="rm-toggle-label"><input type="checkbox" id="rf-thresh-en" onchange="toggleThreshold()"> Enable threshold</label>
+            </div>
+            <div id="rmThreshFields" style="display:none">
+              <div class="rm-row-3" style="margin-top:8px">
+                <div class="rm-field">
+                  <label>Type</label>
+                  <select class="rm-select" id="rf-thresh-type" onchange="buildPreview()">
+                    <option value="both">both</option>
+                    <option value="threshold">threshold</option>
+                    <option value="limit">limit</option>
+                  </select>
+                </div>
+                <div class="rm-field">
+                  <label>Track</label>
+                  <select class="rm-select" id="rf-thresh-track" onchange="buildPreview()">
+                    <option value="by_src">by_src</option>
+                    <option value="by_dst">by_dst</option>
+                  </select>
+                </div>
+              </div>
+              <div class="rm-row-2" style="margin-top:8px">
+                <div class="rm-field">
+                  <label>Count</label>
+                  <input class="rm-input" type="number" id="rf-thresh-count" value="5" min="1" oninput="buildPreview()"/>
+                </div>
+                <div class="rm-field">
+                  <label>Seconds</label>
+                  <input class="rm-input" type="number" id="rf-thresh-secs" value="60" min="1" oninput="buildPreview()"/>
+                </div>
+              </div>
+            </div>
+
+            <div class="rm-field" style="margin-top:10px">
+              <label>Priority <span class="rm-hint">1 (highest) – 4</span></label>
+              <input class="rm-input" type="number" id="rf-priority" placeholder="1" min="1" max="4" oninput="buildPreview()"/>
+            </div>
+
+            <div class="rm-field" style="margin-top:10px">
+              <label>Reference</label>
+              <input class="rm-input" type="text" id="rf-ref" placeholder='url,cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2024-xxxx' oninput="buildPreview()"/>
+            </div>
+          </div>
+
+          <!-- Comment for rule file -->
+          <div class="rm-field" style="margin-top:14px">
+            <label>Comment / Description <span class="rm-hint">optional — added above rule in file</span></label>
+            <textarea class="rm-textarea" id="rf-comment" placeholder="Describe what this rule detects…" rows="2" oninput="buildPreview()"></textarea>
+          </div>
+
+        </div><!-- end form-scroll -->
+      </div>
+
+      <!-- ── TAB: Raw Editor ── -->
+      <div class="rm-tab-content" id="tab-raw" style="display:none">
+        <div class="rm-raw-header">
+          <span style="font-size:12px;color:var(--text-muted)">Paste or type a valid Suricata rule</span>
+          <button class="rm-btn rm-btn-ghost rm-btn-xs" onclick="parseRawRule()"><i class="fas fa-wand-magic-sparkles"></i> Parse to Builder</button>
+        </div>
+        <textarea class="rm-raw-editor" id="rmRawEditor" placeholder='alert tcp any any -> any 22 (msg:"SSH Attempt"; sid:1000001; rev:1;)'></textarea>
+        <div class="rm-raw-hint">
+          <i class="fas fa-circle-info" style="color:#3b82f6"></i>
+          Format: <code>action proto src_ip src_port direction dst_ip dst_port (options;)</code>
+        </div>
+      </div>
+
+      <!-- ── TAB: Templates ── -->
+      <div class="rm-tab-content" id="tab-templates" style="display:none">
+        <div class="rm-templates-grid" id="rmTemplatesGrid"></div>
+      </div>
+
+      <!-- Preview section (shared across all tabs) -->
+      <div class="rm-preview-section">
+        <div class="rm-preview-header">
+          <div class="rm-preview-title"><i class="fas fa-eye" style="color:#06b6d4;font-size:11px"></i> Generated Rule</div>
+          <div style="display:flex;gap:6px">
+            <button class="rm-btn rm-btn-ghost rm-btn-xs" onclick="copyRule()"><i class="fas fa-copy"></i> Copy</button>
+            <div class="rm-toggle-row" style="gap:6px">
+              <label class="rm-toggle-label" style="font-size:11px">
+                <input type="checkbox" id="rf-enabled" checked onchange="buildPreview()"> Enabled
+              </label>
+            </div>
+          </div>
+        </div>
+        <div class="rm-preview-box">
+          <pre id="rmPreviewBox" class="rm-preview-code"></pre>
+        </div>
+        <div class="rm-preview-validation" id="rmValidation"></div>
+      </div>
+
+      <!-- Save bar -->
+      <div class="rm-save-bar">
+        <button class="rm-btn rm-btn-ghost" onclick="clearForm()"><i class="fas fa-eraser"></i> Clear</button>
+        <div style="margin-left:auto;display:flex;gap:8px">
+          <button class="rm-btn rm-btn-ghost" onclick="cancelEdit()"><i class="fas fa-times"></i> Cancel</button>
+          <button class="rm-btn rm-btn-primary" id="rmSaveBtn" onclick="saveRule()">
+            <i class="fas fa-floppy-disk"></i> <span id="rmSaveBtnText">Save Rule</span>
+          </button>
+        </div>
+      </div>
+
+    </div><!-- end editor panel -->
+  </div><!-- end body -->
+
+  <!-- ── Raw file viewer modal ── -->
+  <div class="rm-modal-overlay" id="rmFileModal" style="display:none" onclick="closeFileModal()">
+    <div class="rm-modal" onclick="event.stopPropagation()">
+      <div class="rm-modal-header">
+        <span><i class="fas fa-file-lines" style="color:#3b82f6;margin-right:8px"></i>custom.rules — Raw File</span>
+        <button class="rm-modal-close" onclick="closeFileModal()"><i class="fas fa-times"></i></button>
+      </div>
+      <pre class="rm-modal-content" id="rmModalContent"></pre>
+      <div class="rm-modal-footer">
+        <button class="rm-btn rm-btn-ghost" onclick="copyFileContent()"><i class="fas fa-copy"></i> Copy All</button>
+        <button class="rm-btn rm-btn-ghost rm-btn-danger" onclick="closeFileModal()">Close</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+{% endblock %}
